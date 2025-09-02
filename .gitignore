@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+.env
+
+# VSCode
+.vscode/
+
+# Node.js
+node_modules/
+.next/
+dist/
+out/
+
+# Docker
+*.pid
+*.log
+docker-data/
+
+# OS
+.DS_Store
+Thumbs.db
