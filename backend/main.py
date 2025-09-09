@@ -1,16 +1,19 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
 
 from database import Base, engine, SessionLocal
 from models import Item, User
-from auth import get_password_hash, verify_password, create_access_token
+from auth import get_password_hash, verify_password, create_access_token, get_current_user
 
 # テーブル作成
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+# uvicorn main:app --reload
 
 # --- CORS（フロントから呼べるようにする）---
 app.add_middleware(
@@ -41,6 +44,7 @@ def get_db():
         yield db
     finally:
         db.close()
+
     
 # ヘルスチェック
 @app.get('/')
@@ -78,7 +82,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
 # ログイン
 @app.post("/login")
-def login(form: LoginForm, db: Session = Depends(get_db)):
+def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form.username).first()
     # ユーザーが存在しない or パスワードが一致しない
     if not user or not verify_password(form.password, user.hashed_password):
@@ -87,3 +91,15 @@ def login(form: LoginForm, db: Session = Depends(get_db)):
     # トークンを生成
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+#{
+#  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0YW5ha2EiLCJleHAiOjE3NTczMDA3MjR9.QdpJZHK1peGhQ0J3_eVyDQT5Ht5pmc_AknASy21kSs0",
+#  "token_type": "bearer"
+#}
+
+@app.get("/protected")
+def read_protected(current_user: str = Depends(get_current_user)):
+    return {"message": f"Hello, {current_user}! This is a protected API."}
+
+# 
